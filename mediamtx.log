@@ -16,3 +16,28 @@
 2025/12/10 16:40:39 INF [RTSP] [conn 127.0.0.1:40242] opened
 2025/12/10 16:40:39 INF [RTSP] [session 44f1828b] created by 127.0.0.1:40242
 2025/12/10 16:40:39 INF [RTSP] [session 44f1828b] is publishing to path 'live', 1 track (H264)
+2025/12/10 17:01:30 INF [RTSP] [conn 127.0.0.1:40242] closed: EOF
+2025/12/10 17:01:30 INF [RTSP] [session 44f1828b] destroyed: not in use
+2025/12/10 17:09:59 INF [RTSP] [conn 127.0.0.1:40248] opened
+2025/12/10 17:09:59 INF [RTSP] [session 76aa3b35] created by 127.0.0.1:40248
+2025/12/10 17:09:59 INF [RTSP] [session 76aa3b35] is publishing to path 'live', 1 track (H264)
+2025/12/10 17:12:28 INF [RTSP] [conn 127.0.0.1:40248] closed: EOF
+2025/12/10 17:12:28 INF [RTSP] [session 76aa3b35] destroyed: not in use
+2025/12/10 17:17:01 INF [RTSP] [conn 127.0.0.1:40250] opened
+2025/12/10 17:17:01 INF [RTSP] [session 28ed221d] created by 127.0.0.1:40250
+2025/12/10 17:17:01 INF [RTSP] [session 28ed221d] is publishing to path 'live', 1 track (H264)
+2025/12/10 17:17:10 INF [RTSP] [conn 127.0.0.1:40250] closed: EOF
+2025/12/10 17:17:10 INF [RTSP] [session 28ed221d] destroyed: not in use
+2025/12/10 17:17:22 INF [RTSP] [conn 127.0.0.1:40252] opened
+2025/12/10 17:17:22 INF [RTSP] [session f712599d] created by 127.0.0.1:40252
+2025/12/10 17:17:22 INF [RTSP] [session f712599d] is publishing to path 'live', 1 track (H264)
+2025/12/10 17:17:37 INF [RTSP] [conn 127.0.0.1:40252] closed: read tcp 127.0.0.1:8554->127.0.0.1:40252: i/o timeout
+2025/12/10 17:17:37 INF [RTSP] [session f712599d] destroyed: not in use
+2025/12/10 17:22:14 INF [RTSP] [conn 127.0.0.1:40254] opened
+2025/12/10 17:22:14 INF [RTSP] [session e007f8db] created by 127.0.0.1:40254
+2025/12/10 17:22:14 INF [RTSP] [session e007f8db] is publishing to path 'live', 1 track (H264)
+2025/12/10 17:25:49 INF [RTSP] [conn 127.0.0.1:40254] closed: EOF
+2025/12/10 17:25:49 INF [RTSP] [session e007f8db] destroyed: not in use
+2025/12/10 17:26:04 INF [RTSP] [conn 127.0.0.1:40262] opened
+2025/12/10 17:26:04 INF [RTSP] [session d74820e6] created by 127.0.0.1:40262
+2025/12/10 17:26:04 INF [RTSP] [session d74820e6] is publishing to path 'live', 1 track (H264)
