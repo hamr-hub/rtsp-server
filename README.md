@@ -15,7 +15,7 @@
 命令中的[/dev/video10] 改成设备
 ```bash 
 ffmpeg \
-  -f v4l2 -framerate 30 -video_size 1280x720 -i /dev/video10 \
+  -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video10 \
   -vf "select='gt(scene,0.5)',setpts=N/30/TB" \
   -r 30 \
   -vcodec libx264 -preset veryfast -crf 23 -bf 0 \
@@ -29,13 +29,33 @@ ffmpeg \
 
 ```bash
 
-ffmpeg -f avfoundation -framerate 30 -video_size 1280x720 -i 0:0 \
--vf "select='gt(scene,0.01)',setpts=N/FRAME_RATE/TB" \
--vcodec h264_videotoolbox -acodec aac -bf 0 \
--f segment -segment_time 600 -segment_format mp4 \
-recording_%Y%m%d_%H%M%S.mp4 \
--reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
--nostdin -y
+ffmpeg \
+  -f avfoundation \
+  -framerate 30 \
+  -video_size 640x480 \
+  -i 0:0 \
+  -vf "select='gt(scene,0.02)':e=0.02,setpts=N/FRAME_RATE/TB" \
+  -vcodec h264_videotoolbox \
+  -acodec aac \
+  -bf 0 \
+  -preset fast \
+  -qp 23 \
+  -f segment \
+  -segment_time 600 \
+  -segment_format mp4 \
+  -segment_list "recordings_list.txt" \
+  -segment_list_type flat \
+  -segment_list_flags +live \
+  -reset_timestamps 1 \
+  -strftime 1 \
+  "recording_%Y%m%d_%H%M%S.mp4" \
+  -reconnect 1 \
+  -reconnect_at_eof 1 \
+  -reconnect_streamed 1 \
+  -reconnect_delay_max 5 \
+  -loglevel info \
+  -stats \
+  -y
 
 ```
 执行后预期效果
