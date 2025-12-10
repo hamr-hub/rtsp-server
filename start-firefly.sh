@@ -97,7 +97,7 @@ scan_video_caps_linux() {
             continue
         fi
         
-        # 解析分辨率/帧率（如 1920x1080  : 30 fps）
+        # 解析分辨率/帧率（如 1280x720  : 30 fps）
         if echo "$line" | grep -Eq '^[[:space:]]+[0-9]+x[0-9]+[[:space:]]+:[[:space:]]+[0-9]+ fps'; then
             RES=$(echo "$line" | awk '{print $1}' | sed -e 's/[^0-9x]//g')
             FPS=$(echo "$line" | awk '{print $3}' | sed -e 's/[^0-9]//g')
@@ -108,9 +108,9 @@ scan_video_caps_linux() {
 
     # 默认配置（解析失败时）
     if [ ${#VIDEO_CAPS[@]} -eq 0 ]; then
-        print_warn "解析失败，使用默认：1920x1080/30fps/mjpeg"
+        print_warn "解析失败，使用默认：1280x720/30fps/mjpeg"
         VID_FMT="mjpeg"
-        VID_RES="1920x1080"
+        VID_RES="1280x720"
         VID_FPS="30"
         return
     fi
@@ -246,7 +246,7 @@ scan_devices_macos() {
 
     # macOS 默认参数
     VID_FMT="mjpeg"
-    VID_RES="1920x1080"
+    VID_RES="1280x720"
     VID_FPS="30"
 }
 
@@ -255,7 +255,7 @@ main_config() {
     print_info "\n========== 配置推流参数 =========="
     # 默认值
     PRESET="medium"
-    VID_BITRATE="5000k"
+    VID_BITRATE="2000k"
     AUD_BITRATE="192k"
     RTSP_URL="rtsp://localhost:8554/live"
     SAVE_LOCAL="yes"

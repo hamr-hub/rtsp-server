@@ -43,3 +43,72 @@ recording_%Y%m%d_%H%M%S.mp4 \
 2. 每 10 分钟（600 秒）生成一个文件，命名示例：recording_20251210_163000.mp4；
 3. 无画面变化时（帧差异 < 0.01），该时间段内的帧会被跳过，最终文件仅保留有变化的画面；
 4. 停止录制：按 Ctrl+C 即可。
+
+
+
+# RK3399 源码编译 ffmpeg
+
+## 下载代码
+```base
+# 1. 克隆 FFmpeg 源码
+git clone https://git.ffmpeg.org/ffmpeg.git
+## 报错尝试：git clone --depth 1 https://gitee.com/mirrors/ffmpeg.git
+
+cd ffmpeg
+
+# 2. 配置编译参数（核心：开启 --enable-librockchipmpp）
+./configure \
+  --prefix=/usr/local \
+  --enable-gpl \
+  --enable-nonfree \
+  --enable-v4l2_m2m \
+  --enable-hardcoded-tables \
+  --enable-shared \
+  --disable-static \
+  --disable-doc \
+  --disable-ffplay \
+  --disable-ffprobe \
+  --arch=arm64 \
+  --target-os=linux
+
+# 3. 编译安装（-j6 适配 6 核）
+make -j6
+sudo make install
+
+# 4. 刷新库缓存
+sudo ldconfig
+```
+
+## 验证
+
+ffmpeg -encoders | grep rkmpp
+
+### RK3399 硬件编码命令
+
+```
+ffmpeg -re -hide_banner -loglevel error \
+  -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i "/dev/video10" \
+  -c:v h264_rkmpp -b:v 2000k -flags +global_header -pix_fmt nv12 \
+  -color_range 1 -colorspace bt601 \
+  -fflags +flush_packets -max_delay 500000 -an \
+  -f rtsp -rtsp_transport tcp "rtsp://localhost:8554/live" \
+```
+## opencv安装
+
+发布版本下载：[https://opencv.org/releases/]
+
+```bash
+
+git clone --depth 1 https://github.com/opencv/opencv.git
+# git clone --depth 1 https://gitee.com/mirror/opencv.git
+
+apt-get install libopencv-dev
+
+cd opencv
+
+mkdir build && cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local/opencv_install ..
+
+make -j$(nproc) && sudo make install
+
+```
