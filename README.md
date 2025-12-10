@@ -10,6 +10,19 @@
 3. 注册systemd， 参考(rtsp-server.service)
 4. 启动推流脚本 ./start.sh
 
+### linux 录制
+
+命令中的[/dev/video10] 改成设备
+```bash 
+ffmpeg \
+  -f v4l2 -framerate 30 -video_size 1280x720 -i /dev/video10 \
+  -vf "select='gt(scene,0.5)',setpts=N/30/TB" \
+  -r 30 \
+  -vcodec libx264 -preset veryfast -crf 23 -bf 0 \
+  -nostdin -y "recording_$(date +%Y%m%d_%H%M%S).mp4"
+```
+
+
 
 
 ### macos 录制
