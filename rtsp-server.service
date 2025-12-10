@@ -1,0 +1,20 @@
+[Unit]
+Description=MediaMTX (RTSP/RTMP/HLS/WebRTC server)
+After=network.target network-online.target
+Documentation=https://github.com/aler9/mediamtx
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/rtsp-server
+ExecStart=/bin/sh -c "/root/rtsp-server/mediamtx /root/rtsp-server/mediamtx.yml > /root/rtsp-server/mediamtx.log 2>&1"
+Restart=on-failure 
+RestartSec=5s   
+KillMode=process
+TimeoutStopSec=5s
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

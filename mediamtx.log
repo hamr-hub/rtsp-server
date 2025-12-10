@@ -1,0 +1,18 @@
+2025/12/10 14:58:07 INF MediaMTX v1.15.5
+2025/12/10 14:58:07 INF configuration loaded from /root/rtsp-server/mediamtx.yml
+2025/12/10 14:58:07 INF [RTSP] listener opened on :8554 (TCP), :8000 (UDP/RTP), :8001 (UDP/RTCP)
+2025/12/10 14:58:07 INF [RTMP] listener opened on :1935
+2025/12/10 14:58:07 INF [HLS] listener opened on :8888
+2025/12/10 14:58:07 INF [WebRTC] listener opened on :8889 (HTTP), :8189 (ICE/UDP)
+2025/12/10 14:58:07 INF [SRT] listener opened on :8890 (UDP)
+2025/12/10 14:58:22 INF [RTSP] [conn 127.0.0.1:40234] opened
+2025/12/10 14:58:22 INF [RTSP] [session 78fbd1ac] created by 127.0.0.1:40234
+2025/12/10 14:58:22 INF [RTSP] [session 78fbd1ac] is publishing to path 'live', 1 track (H264)
+2025/12/10 14:59:27 INF [HLS] [muxer live] created (requested by [2402:5ec0:1fff:fffe::44]:6058)
+2025/12/10 14:59:27 INF [HLS] [muxer live] is converting into HLS, 1 track (H264)
+2025/12/10 15:01:46 INF [HLS] [muxer live] destroyed: not used anymore
+2025/12/10 16:01:00 INF [RTSP] [conn 127.0.0.1:40234] closed: EOF
+2025/12/10 16:01:00 INF [RTSP] [session 78fbd1ac] destroyed: not in use
+2025/12/10 16:40:39 INF [RTSP] [conn 127.0.0.1:40242] opened
+2025/12/10 16:40:39 INF [RTSP] [session 44f1828b] created by 127.0.0.1:40242
+2025/12/10 16:40:39 INF [RTSP] [session 44f1828b] is publishing to path 'live', 1 track (H264)
