@@ -63,7 +63,6 @@ ffmpeg \
 2. 每 10 分钟（600 秒）生成一个文件，命名示例：recording_20251210_163000.mp4；
 3. 无画面变化时（帧差异 < 0.01），该时间段内的帧会被跳过，最终文件仅保留有变化的画面；
 4. 停止录制：按 Ctrl+C 即可。
-<<<<<<< HEAD
 
 
 
@@ -98,7 +97,24 @@ sudo make install
 
 # 4. 刷新库缓存
 sudo ldconfig
+
+
+
 ```
+
+
+ffmpeg 编译最新命令：
+缺依赖可以问AI用api装上：
+```bash 
+
+ ./configure --prefix=/usr --extra-version=1ubuntu1.0firefly3 --toolchain=hardened --libdir=/usr/lib/aarch64-linux-gnu --incdir=/usr/include/aarch64-linux-gnu --arch=arm64 --enable-gpl --disable-stripping --disable-filter=resample --disable-avisynth --disable-gnutls --disable-ladspa --disable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --disable-libcdio --enable-libcodec2 --disable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libgme --enable-libgsm --enable-libjack --enable-libmp3lame --enable-libmysofa --disable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librsvg --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libssh --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzmq --enable-libzvbi --disable-lv2 --enable-omx --enable-openal --enable-opencl --enable-opengl --enable-sdl2 --enable-libdc1394 --enable-libdrm --disable-libiec61883 --disable-chromaprint --disable-frei0r --enable-libx264 --enable-libdrm --enable-rkmpp --enable-version3 --disable-libopenh264 --disable-vaapi --disable-vdpau --disable-decoder=h264_v4l2m2m --disable-decoder=vp8_v4l2m2m --disable-decoder=mpeg2_v4l2m2m --disable-decoder=mpeg4_v4l2m2m --enable-shared --disable-doc
+
+
+之后再make
+
+
+```
+
 
 ## 验证
 
@@ -113,6 +129,15 @@ ffmpeg -re -hide_banner -loglevel error \
   -color_range 1 -colorspace bt601 \
   -fflags +flush_packets -max_delay 500000 -an \
   -f rtsp -rtsp_transport tcp "rtsp://localhost:8554/live" \
+
+
+ffmpeg -re -hide_banner -loglevel warning \
+  -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i /dev/video10 \
+  -c:v h264_rkmpp -b:v 2000k -g 60 -r 30 -pix_fmt yuv420p \
+  -color_range tv -colorspace bt709 -flags +global_header \
+  -fflags +flush_packets+nobuffer -max_delay 500000 -bufsize 2M -an \
+  -map 0:v -f rtsp -rtsp_transport tcp rtsp://localhost:8554/live \
+  -map 0:v -f mp4 -movflags +faststart -y /mnt/sd/camera_$(date +%Y%m%d_%H%M%S).mp4
 ```
 ## opencv安装
 
@@ -133,5 +158,3 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local/opencv_inst
 make -j$(nproc) && sudo make install
 
 ```
-=======
->>>>>>> 684d06adc51448313f7e4665d3f861092a708b9d
