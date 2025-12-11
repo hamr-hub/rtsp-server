@@ -1,14 +1,86 @@
 # rtsp-server
 
-1. 官网 (mediamtx)[https://mediamtx.org],  (下载地址)[https://github.com/bluenviron/mediamtx/releases/tag/v1.15.5]
-2. 更新ffmpeg 7.0+, (查看版本 ffmpeg --version)  (官方仓库) [https://git.ffmpeg.org/ffmpeg.git]
-   ffmpeg 更新
-   - (johnvansickle 静态更新)[https://www.johnvansickle.com/ffmpeg/]
-   - (BtbN-build)[https://github.com/BtbN/FFmpeg-Builds]
-   - (官网库)[https://ffmpeg.org/download.html]
-  
-3. 注册systemd， 参考(rtsp-server.service)
-4. 启动推流脚本 ./start.sh
+## 快速开始
+
+1. **官网**: [MediaMTX](https://mediamtx.org)
+2. **下载地址**: [MediaMTX v1.15.5](https://github.com/bluenviron/mediamtx/releases/tag/v1.15.5)
+3. **FFmpeg版本**: 需要 7.0+ 版本
+   - 查看版本: `ffmpeg --version`
+   - 官方仓库: [https://git.ffmpeg.org/ffmpeg.git](https://git.ffmpeg.org/ffmpeg.git)
+   - 静态编译包:
+     - [johnvansickle](https://www.johnvansickle.com/ffmpeg/)
+     - [BtbN-build](https://github.com/BtbN/FFmpeg-Builds)
+     - [官网下载](https://ffmpeg.org/download.html)
+4. **注册systemd服务**: 参考 `rtsp-server.service`
+5. **启动推流脚本**: `./start.sh`
+
+## 🚀 新增功能：参数化启动脚本
+
+`start-webcam.sh` 脚本现已支持命令行参数，可以在两种编码模式之间灵活切换：
+
+### 使用方法
+
+```bash
+# 1. 使用默认的 h264_rkmpp 硬件编码模式
+./start-webcam.sh
+
+# 2. 使用标准H264输入 + Copy编码模式
+./start-webcam.sh -m copy
+
+# 3. 使用copy模式，60fps
+./start-webcam.sh -m copy -f 60
+
+# 4. 使用rkmpp模式，1080p分辨率
+./start-webcam.sh --mode rkmpp --size 1920x1080
+
+# 5. 自定义所有参数
+./start-webcam.sh -m copy -d /dev/video0 -s 1920x1080 -f 30 -t 1800
+
+# 6. 查看帮助信息
+./start-webcam.sh -h
+```
+
+### 支持的参数
+
+| 参数 | 短参数 | 说明 | 默认值 |
+|------|--------|------|--------|
+| `--mode` | `-m` | 编码模式：`rkmpp` 或 `copy` | `rkmpp` |
+| `--device` | `-d` | 摄像头设备节点 | `/dev/video10` |
+| `--size` | `-s` | 视频分辨率 | `1280x720` |
+| `--framerate` | `-f` | 帧率 | `30` |
+| `--segment-time` | `-t` | 分段时长（秒） | `3600` |
+| `--help` | `-h` | 显示帮助信息 | - |
+
+### 两种编码模式对比
+
+#### 1. h264_rkmpp 模式（默认）
+- **特点**: 使用Rockchip硬件编码器，性能优异，CPU占用低
+- **适用场景**: RK3399等支持硬件编码的平台
+- **FFmpeg核心参数**:
+  ```bash
+  -c:v h264_rkmpp -b:v 2000k -g 60 -r 30 -pix_fmt yuv420p
+  -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709
+  ```
+
+#### 2. 标准H264 + Copy编码模式
+- **特点**: 直接复制标准H264流，不做重新编码，保持原始质量
+- **适用场景**: 输入已经是标准H264格式的摄像头
+- **FFmpeg核心参数**:
+  ```bash
+  -input_format h264 -c:v copy
+  -bsf:v h264_mp4toannexb
+  -avoid_negative_ts make_zero
+  ```
+
+### 后台运行
+
+```bash
+# 使用nohup后台运行（推荐）
+nohup ./start-webcam.sh > "/mnt/sd/log/ffmpeg.log" 2>&1 &
+
+# 使用systemd服务（需要配置rtsp-server.service）
+sudo systemctl start rtsp-server
+```
 
 ### linux 录制
 
@@ -122,6 +194,8 @@ ffmpeg -encoders | grep rkmpp
 
 ### RK3399 硬件编码命令
 
+#### 传统命令行方式
+
 ```
 ffmpeg -re -hide_banner -loglevel error \
   -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i "/dev/video10" \
@@ -138,6 +212,45 @@ ffmpeg -re -hide_banner -loglevel warning \
   -fflags +flush_packets+nobuffer -max_delay 500000 -bufsize 2M -an \
   -map 0:v -f rtsp -rtsp_transport tcp rtsp://localhost:8554/live \
   -map 0:v -f mp4 -movflags +faststart -y /mnt/sd/camera_$(date +%Y%m%d_%H%M%S).mp4
+```
+
+#### 推荐：使用参数化脚本
+
+```bash
+# 使用默认的h264_rkmpp模式
+./start-webcam.sh
+
+# 或者指定参数
+./start-webcam.sh -m rkmpp -s 1920x1080 -f 30
+```
+
+### 标准H264 + Copy编码命令
+
+#### 传统命令行方式
+
+```bash
+ffmpeg -re -hide_banner -loglevel warning \
+  -f v4l2 -thread_queue_size 4096 -input_format h264 \
+  -video_size 1280x720 -framerate 30 \
+  -i /dev/video10 \
+  -c:v copy \
+  -bsf:v h264_mp4toannexb \
+  -flags +global_header -fflags +flush_packets+nobuffer+genpts \
+  -max_delay 500000 -bufsize 2M -an \
+  -avoid_negative_ts make_zero \
+  -map 0:v -f rtsp -rtsp_transport tcp rtsp://localhost:8554/live \
+  -map 0:v -f segment -segment_time 3600 -segment_format mp4 \
+  -strftime 1 -reset_timestamps 1 -movflags +faststart -y /mnt/sd/camera_%Y%m%d_%H%M%S.mp4
+```
+
+#### 推荐：使用参数化脚本
+
+```bash
+# 使用标准H264 + Copy编码模式
+./start-webcam.sh -m copy
+
+# 或者指定参数
+./start-webcam.sh -m copy -s 1920x1080 -f 60 -t 1800
 ```
 ## opencv安装
 
@@ -160,6 +273,41 @@ make -j$(nproc) && sudo make install
 ```
 
 
-##后台运行
+## 脚本特性
 
-nohup ./start-webcam.sh > "${LOG_DIR}/ffmpeg.log" 2>&1 &
+### 自动化功能
+- ✅ **环境检查**: 自动检查FFmpeg、摄像头设备、磁盘空间
+- ✅ **编码器验证**: 编码器不可用时自动切换
+- ✅ **自动清理**: 定时清理旧文件，防止磁盘满
+- ✅ **日志记录**: 完整的操作和错误日志
+- ✅ **优雅退出**: 支持Ctrl+C等信号处理
+
+### 后台运行
+
+```bash
+# 使用nohup后台运行（推荐）
+nohup ./start-webcam.sh > "/mnt/sd/log/ffmpeg.log" 2>&1 &
+
+# 使用systemd服务（需要配置rtsp-server.service）
+sudo systemctl start rtsp-server
+
+# 查看运行状态
+sudo systemctl status rtsp-server
+
+# 查看日志
+tail -f /mnt/sd/log/ffmpeg.log
+```
+
+### 日志文件说明
+
+- `/mnt/sd/log/ffmpeg.log`: FFmpeg详细日志
+- `/mnt/sd/log/info.log`: 脚本运行信息
+- `/mnt/sd/log/error.log`: 错误日志
+- `/mnt/sd/log/clean.log`: 文件清理日志
+
+### 文件清理策略
+
+- **保留时间**: 默认保留7天内的录制文件
+- **磁盘阈值**: 磁盘使用率超过85%时自动清理最旧文件
+- **分段时长**: 默认每1小时生成一个文件
+- **自动触发**: 每30分钟执行一次清理检查

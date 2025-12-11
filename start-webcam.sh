@@ -1,17 +1,114 @@
 #!/bin/bash
 set -euo pipefail  # 严格模式：错误立即退出，未定义变量报错，管道错误传递
 
-# ===================== 核心配置（与你的命令完全对齐，按需修改）=====================
-# 摄像头基础参数
+# ===================== 参数解析 =====================
+# 默认配置
+MODE="rkmpp"  # 可选: rkmpp 或 copy
 CAMERA_DEV="/dev/video10"          # 摄像头设备节点
 VIDEO_SIZE="1280x720"              # 分辨率
 FRAMERATE=30                       # 帧率
-ENCODER="h264_rkmpp"               # 核心编码器（保留你的原始配置）
-BITRATE="2000k"                    # 视频码率
-GOP_SIZE=60                        # GOP大小
-MAX_DELAY=500000                   # 最大延迟
-BUFSIZE="10M"                       # 编码缓冲区大小
 SEGMENT_TIME=3600                  # 分段时长（秒），1小时=3600秒
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -m|--mode)
+            MODE="$2"
+            shift 2
+            ;;
+        -d|--device)
+            CAMERA_DEV="$2"
+            shift 2
+            ;;
+        -s|--size)
+            VIDEO_SIZE="$2"
+            shift 2
+            ;;
+        -f|--framerate)
+            FRAMERATE="$2"
+            shift 2
+            ;;
+        -t|--segment-time)
+            SEGMENT_TIME="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "使用方法: $0 [选项]"
+            echo "选项:"
+            echo "  -m, --mode MODE          编码模式: rkmpp (默认) 或 copy"
+            echo "  -d, --device DEVICE      摄像头设备节点 (默认: /dev/video10)"
+            echo "  -s, --size SIZE          视频分辨率 (默认: 1280x720)"
+            echo "  -f, --framerate FPS      帧率 (默认: 30)"
+            echo "  -t, --segment-time SEC   分段时长（秒）(默认: 3600)"
+            echo "  -h, --help               显示此帮助信息"
+            echo ""
+            echo "示例:"
+            echo "  $0                                    # 使用默认的 rkmpp 模式"
+            echo "  $0 -m copy                           # 使用标准H264 + Copy编码"
+            echo "  $0 --mode rkmpp --size 1920x1080    # 使用rkmpp模式，1080p分辨率"
+            echo "  $0 -m copy -f 60                     # 使用copy模式，60fps"
+            exit 0
+            ;;
+        *)
+            echo "未知选项: $1"
+            echo "使用 -h 或 --help 查看帮助信息"
+            exit 1
+            ;;
+    esac
+done
+
+# 验证模式参数
+if [[ "$MODE" != "rkmpp" && "$MODE" != "copy" ]]; then
+    echo "错误: 编码模式必须是 'rkmpp' 或 'copy'"
+    echo "使用 -h 或 --help 查看帮助信息"
+    exit 1
+fi
+
+echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 启动模式: $MODE" >> "/mnt/sd/log/info.log"
+echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 摄像头设备: $CAMERA_DEV" >> "/mnt/sd/log/info.log"
+echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 分辨率: $VIDEO_SIZE, 帧率: $FRAMERATE" >> "/mnt/sd/log/info.log"
+
+# ===================== 核心配置（根据模式动态配置）=====================
+# 摄像头基础参数
+INPUT_FORMAT="mjpeg"                 # 默认输入格式
+THREAD_QUEUE_SIZE=2048              # 线程队列大小
+SKIP_FRAME="nokey"                  # 跳帧策略
+
+# 根据模式设置编码器和相关参数
+if [[ "$MODE" == "rkmpp" ]]; then
+    ENCODER="h264_rkmpp"            # 使用硬件编码器
+    BITRATE="2000k"                 # 视频码率
+    GOP_SIZE=60                     # GOP大小
+    MAX_DELAY=500000                # 最大延迟
+    BUFSIZE="10M"                   # 编码缓冲区大小
+    INPUT_FORMAT="mjpeg"            # 输入格式
+    SKIP_FRAME="nokey"              # 跳帧策略
+    COLOR_PARAMS="-color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709"
+    SWSCALE_FILTER="-sws_flags fast_bilinear"
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 使用 h264_rkmpp 硬件编码模式" >> "/mnt/sd/log/info.log"
+else
+    # copy 模式：直接复制标准H264流
+    ENCODER="copy"                  # 直接复制，不重新编码
+    BITRATE=""                      # copy模式不需要码率
+    GOP_SIZE=""                     # copy模式不需要GOP
+    MAX_DELAY=500000                # 最大延迟
+    BUFSIZE=""                      # copy模式不需要缓冲区大小
+    INPUT_FORMAT="h264"             # 标准H264输入格式
+    SKIP_FRAME=""                   # copy模式不需要跳帧
+    COLOR_PARAMS=""                 # copy模式保持原始色彩
+    SWSCALE_FILTER=""               # copy模式不需要缩放
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 使用 标准H264 + Copy 编码模式" >> "/mnt/sd/log/info.log"
+fi
+
+# 输出配置
+RTSP_URL="rtsp://localhost:8554/live"  # RTSP推流地址
+SAVE_DIR="/mnt/sd"                     # 视频保存目录
+FILE_NAME_TEMPLATE="camera_%Y%m%d_%H%M%S.mp4"  # 分段文件名模板
+
+# 清理策略
+CLEAN_DAYS=7                       # 保留7天内的录制文件
+DISK_THRESHOLD=85                  # 磁盘使用率阈值（%），超过则强制清理
+LOG_DIR="/mnt/sd/log/"          # 日志目录
 
 # 输出配置
 RTSP_URL="rtsp://localhost:8554/live"  # RTSP推流地址
@@ -136,18 +233,35 @@ main() {
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] 启动FFmpeg推流+分段录制（编码器：${ENCODER}）" >> "${LOG_DIR}/info.log"
     echo "启动成功！FFmpeg核心参数与你的命令完全一致，日志文件：${LOG_DIR}/ffmpeg.log"
 
-    # 执行修正后的核心命令（与你验证通过的命令完全一致）
-    ffmpeg -re -hide_banner -loglevel warning \
-      -f v4l2 -thread_queue_size 2048 -input_format mjpeg -skip_frame nokey \
-      -video_size "${VIDEO_SIZE}" -framerate "${FRAMERATE}" -i "${CAMERA_DEV}" \
-      -c:v "${ENCODER}" -b:v "${BITRATE}" -g "${GOP_SIZE}" -r "${FRAMERATE}" -pix_fmt yuv420p \
-      -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -flags +global_header \
-      -fflags +flush_packets+nobuffer -max_delay "${MAX_DELAY}" -bufsize "${BUFSIZE}" -an \
-      -sws_flags fast_bilinear \
-      -map 0:v -f rtsp -rtsp_transport tcp "${RTSP_URL}" \
-      -map 0:v -f segment -segment_time "${SEGMENT_TIME}" -segment_format mp4 \
-      -strftime 1 -reset_timestamps 1 -movflags +faststart -y "${save_path}" \
-      > "${LOG_DIR}/ffmpeg.log" 2>&1 &
+    # 根据模式构建FFmpeg命令
+    if [[ "$MODE" == "rkmpp" ]]; then
+        # h264_rkmpp 模式
+        ffmpeg -re -hide_banner -loglevel warning \
+          -f v4l2 -thread_queue_size "${THREAD_QUEUE_SIZE}" -input_format "${INPUT_FORMAT}" -skip_frame "${SKIP_FRAME}" \
+          -video_size "${VIDEO_SIZE}" -framerate "${FRAMERATE}" -i "${CAMERA_DEV}" \
+          -c:v "${ENCODER}" -b:v "${BITRATE}" -g "${GOP_SIZE}" -r "${FRAMERATE}" -pix_fmt yuv420p \
+          ${COLOR_PARAMS} -flags +global_header \
+          -fflags +flush_packets+nobuffer -max_delay "${MAX_DELAY}" ${BUFSIZE:+-bufsize "${BUFSIZE}"} -an \
+          ${SWSCALE_FILTER} \
+          -map 0:v -f rtsp -rtsp_transport tcp "${RTSP_URL}" \
+          -map 0:v -f segment -segment_time "${SEGMENT_TIME}" -segment_format mp4 \
+          -strftime 1 -reset_timestamps 1 -movflags +faststart -y "${save_path}" \
+          > "${LOG_DIR}/ffmpeg.log" 2>&1 &
+    else
+        # copy 模式：标准H264输入 + Copy编码
+        ffmpeg -re -hide_banner -loglevel warning \
+          -f v4l2 -thread_queue_size "${THREAD_QUEUE_SIZE}" -input_format "${INPUT_FORMAT}" \
+          -video_size "${VIDEO_SIZE}" -framerate "${FRAMERATE}" -i "${CAMERA_DEV}" \
+          -c:v "${ENCODER}" \
+          -bsf:v h264_mp4toannexb \
+          -flags +global_header -fflags +flush_packets+nobuffer+genpts \
+          -max_delay "${MAX_DELAY}" -an \
+          -avoid_negative_ts make_zero \
+          -map 0:v -f rtsp -rtsp_transport tcp "${RTSP_URL}" \
+          -map 0:v -f segment -segment_time "${SEGMENT_TIME}" -segment_format mp4 \
+          -strftime 1 -reset_timestamps 1 -movflags +faststart -y "${save_path}" \
+          > "${LOG_DIR}/ffmpeg.log" 2>&1 &
+    fi
 
     # 记录FFmpeg进程ID
     FFMPEG_PID=$!
