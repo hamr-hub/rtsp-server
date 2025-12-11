@@ -158,3 +158,8 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local/opencv_inst
 make -j$(nproc) && sudo make install
 
 ```
+
+
+##后台运行
+
+nohup ./start-webcam.sh > "${LOG_DIR}/ffmpeg.log" 2>&1 &
